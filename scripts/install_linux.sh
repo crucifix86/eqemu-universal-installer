@@ -380,14 +380,23 @@ download_server_files() {
     echo ""
     echo "[Step] Downloading server files from GitHub..."
 
-    # Clone the repository to a temporary location
+    # Check if we're running from the cloned repository
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local repo_root="$(dirname "$script_dir")"
+
+    if [ -d "$repo_root/install" ]; then
+        echo "  Using local install directory from repository..."
+        cp -r "$repo_root/install"/* "$EQEMU_SERVER_DIR/"
+        echo "  Server files copied successfully"
+        return 0
+    fi
+
+    # Not in repo, need to clone
     local temp_dir="/tmp/eqemu_installer_$$"
     mkdir -p "$temp_dir"
 
-    echo "  Cloning repository..."
-    if git clone --depth 1 https://github.com/crucifix86/eqemu-universal-installer.git "$temp_dir" 2>&1 | grep -v "^Cloning"; then
-        echo "  Repository cloned successfully"
-
+    echo "  Cloning repository from GitHub..."
+    if git clone --depth 1 https://github.com/crucifix86/eqemu-universal-installer.git "$temp_dir" 2>&1; then
         # Copy the install directory
         if [ -d "$temp_dir/install" ]; then
             echo "  Copying server files..."
