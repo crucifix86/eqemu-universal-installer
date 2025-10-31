@@ -319,6 +319,43 @@ install_fedora_prereqs() {
 }
 
 #########################################################
+# Setup Perl Symlinks for Pre-compiled Binaries
+#########################################################
+
+setup_perl_symlinks() {
+    echo ""
+    echo "[Step] Setting up Perl environment for server binaries..."
+
+    # Pre-compiled EQEmu binaries expect Perl at /opt/eqemu-perl
+    # Create symlinks to system Perl to satisfy this requirement
+
+    # Detect Perl paths
+    local perl_bin=$(which perl)
+    local perl_archlib=$(perl -V:archlib | sed "s/archlib='//;s/';//")
+    local perl_version=$(perl -e 'print substr($^V, 1)')
+
+    echo "  Detected system Perl: $perl_bin"
+    echo "  Perl library path: $perl_archlib"
+    echo "  Perl version: $perl_version"
+
+    # Create /opt/eqemu-perl directory structure
+    mkdir -p /opt/eqemu-perl/bin
+    mkdir -p /opt/eqemu-perl/lib
+
+    # Create symlinks
+    echo "  Creating symlinks to /opt/eqemu-perl..."
+    ln -sf "$perl_bin" /opt/eqemu-perl/bin/perl
+    ln -sf "$perl_archlib" /opt/eqemu-perl/lib/$perl_version
+
+    # Also symlink common Perl directories
+    if [ -d /usr/share/perl ]; then
+        ln -sf /usr/share/perl /opt/eqemu-perl/share
+    fi
+
+    echo "  Perl environment configured successfully"
+}
+
+#########################################################
 # Configure MariaDB
 #########################################################
 
@@ -779,6 +816,7 @@ main() {
             ;;
     esac
 
+    setup_perl_symlinks
     configure_mariadb
     create_directories
     download_server_files
