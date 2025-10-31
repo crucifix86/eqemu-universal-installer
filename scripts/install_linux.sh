@@ -510,9 +510,19 @@ download_database() {
 
     echo "  Extracting database..."
     unzip -q peqdatabase.zip
-    mv peqdatabase-main/* .
-    rmdir peqdatabase-main
+
+    # Check what was extracted
+    if [ -d "peqdatabase-main" ]; then
+        mv peqdatabase-main/* . 2>/dev/null || true
+        mv peqdatabase-main/.* . 2>/dev/null || true
+        rmdir peqdatabase-main 2>/dev/null || true
+    fi
+
     rm peqdatabase.zip
+
+    # List what SQL files we have for debugging
+    echo "  Available SQL files:"
+    ls -1 *.sql 2>/dev/null | head -5 || echo "  No .sql files found"
 
     echo "  Database downloaded successfully"
 }
@@ -527,13 +537,38 @@ import_database() {
 
     cd "$EQEMU_DB_DIR"
 
-    if [ -f "create_all_tables.sql" ]; then
-        echo "  Importing database schema..."
-        mysql -u"$EQEMU_DB_USER" -p"$EQEMU_DB_PASSWORD" "$EQEMU_DB_NAME" < create_all_tables.sql
+    # Try to find the main SQL file - PEQ database uses different naming conventions
+    local sql_file=""
+
+    # Check for common PEQ database file patterns
+    if [ -f "peq.sql" ]; then
+        sql_file="peq.sql"
+    elif [ -f "create_all_tables.sql" ]; then
+        sql_file="create_all_tables.sql"
+    else
+        # Look for any .sql file that might be the main database dump
+        # Typically named like peq-TIMESTAMP.sql or similar
+        sql_file=$(ls -1 peq*.sql 2>/dev/null | head -1)
+
+        if [ -z "$sql_file" ]; then
+            # Try to find any large SQL file
+            sql_file=$(ls -1S *.sql 2>/dev/null | head -1)
+        fi
+    fi
+
+    if [ -n "$sql_file" ] && [ -f "$sql_file" ]; then
+        echo "  Found database file: $sql_file"
+        echo "  Importing database (this may take several minutes)..."
+        mysql -u"$EQEMU_DB_USER" -p"$EQEMU_DB_PASSWORD" "$EQEMU_DB_NAME" < "$sql_file"
         echo "  Database imported successfully"
     else
-        echo "  Warning: create_all_tables.sql not found"
+        echo "  Error: Could not find database SQL file"
+        echo "  Files in $EQEMU_DB_DIR:"
+        ls -lh *.sql 2>/dev/null || echo "  No SQL files found"
+        echo ""
         echo "  You will need to import the database manually"
+        echo "  See: /root/eqemu_credentials.txt for instructions"
+        return 1
     fi
 
     # Add world server entry
