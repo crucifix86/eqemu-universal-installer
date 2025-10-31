@@ -16,12 +16,12 @@ chmod +x install.sh scripts/install_linux.sh
 sudo ./install.sh
 ```
 
-The installer will prompt you for:
-- Database credentials
-- Server name
-- Configuration settings
+**✨ Fully Automated** - No user input required! The installer:
+- Auto-generates all passwords and credentials
+- Saves everything to `/root/eqemu_credentials.txt`
+- Installs and configures everything automatically
 
-Installation takes 15-30 minutes and handles everything automatically.
+Installation takes 15-30 minutes. All your credentials will be saved to a text file for you to review after installation.
 
 ### 💡 Testing on Ubuntu VPS
 
@@ -41,10 +41,14 @@ chmod +x install.sh scripts/install_linux.sh
 sudo ./install.sh
 ```
 
-**Important**: The installer will create an `eqemu` user. After installation, you can:
-- Start server: `cd /home/eqemu/server && ./start.sh`
-- Check status: `./status.sh`
-- Stop server: `./stop.sh`
+**Important**:
+- All credentials are auto-generated and saved to `/root/eqemu_credentials.txt`
+- The installer creates an `eqemu` user with a generated password
+- After installation:
+  - View credentials: `cat /root/eqemu_credentials.txt`
+  - Start server: `cd /home/eqemu/server && ./start.sh`
+  - Check status: `cd /home/eqemu/server && ./status.sh`
+  - Stop server: `cd /home/eqemu/server && ./stop.sh`
 
 ## 📋 Table of Contents
 
@@ -63,10 +67,11 @@ sudo ./install.sh
 ## Features
 
 - **Universal**: Single installer package for both Windows and Linux
-- **Automated**: Handles all prerequisites, dependencies, and configuration
-- **Interactive**: Prompts for all necessary configuration details
+- **Fully Automated**: Zero user input required - auto-generates all credentials
+- **Secure**: Generates strong random passwords and saves them securely
 - **Safe**: Creates backups of configuration files before modification
 - **Complete**: Includes server files, maps, database, and binaries
+- **Clean VPS Ready**: Designed for fresh Ubuntu/Debian installations
 
 ## Requirements
 
@@ -138,24 +143,22 @@ sudo ./install.sh
    sudo ./install.sh
    ```
 
-4. **Follow the prompts**:
-   - Linux user `eqemu` password (for the eqemu user that will be created)
-   - MySQL root password (create a secure password)
-   - Database name (e.g., `peqdb`)
-   - Database username (e.g., `eqemu`)
-   - Database password (create a secure password)
-   - Server long name (e.g., `My EQEmu Server`)
-   - Server short name (e.g., `myserver`)
-
-5. **Wait for installation to complete**
+4. **Wait for installation to complete** (No user input required!)
    - This may take 15-30 minutes depending on your internet connection
    - The installer will:
+     - Auto-generate secure passwords
      - Install all prerequisites (MariaDB, Perl, Lua, etc.)
      - Download server binaries
      - Download and import PEQ database
      - Download PEQ maps
      - Configure server files
      - Set up the eqemu user and directories
+     - Save all credentials to `/root/eqemu_credentials.txt`
+
+5. **View your credentials**:
+   ```bash
+   cat /root/eqemu_credentials.txt
+   ```
 
 6. **Complete post-installation steps** (see [Post-Installation](#post-installation))
 

@@ -59,66 +59,150 @@ detect_os() {
 }
 
 #########################################################
-# Collect User Input
+# Generate Random Password
 #########################################################
 
-collect_user_input() {
+generate_password() {
+    # Generate a 16-character random password
+    openssl rand -base64 12 | tr -d "=+/" | cut -c1-16
+}
+
+#########################################################
+# Auto-Generate Configuration (No User Input Required)
+#########################################################
+
+auto_generate_config() {
     echo ""
     echo "==========================================================="
-    echo "Configuration Setup"
+    echo "Automatic Configuration Setup"
     echo "==========================================================="
     echo ""
-    echo "Please provide the following information:"
+    echo "Generating secure credentials automatically..."
     echo ""
 
     # Check if install_variables.txt exists
     if [ -f "$EQEMU_INSTALL_DIR/install_variables.txt" ]; then
         echo "Found existing installation configuration"
-        read -p "Do you want to use the existing configuration? (y/n): " use_existing
-        if [[ "$use_existing" == "y" || "$use_existing" == "Y" ]]; then
-            source "$EQEMU_INSTALL_DIR/install_variables.txt"
-            echo "Using existing configuration"
-            return
-        fi
+        echo "Loading existing credentials..."
+        source "$EQEMU_INSTALL_DIR/install_variables.txt"
+        echo "Using existing configuration"
+        return
     fi
 
-    # EQEmu user password
-    echo "Create password for Linux user 'eqemu':"
-    read -s EQEMU_USER_PASSWORD
-    echo ""
+    # Auto-generate passwords
+    EQEMU_USER_PASSWORD=$(generate_password)
+    MYSQL_ROOT_PASSWORD=$(generate_password)
+    EQEMU_DB_PASSWORD=$(generate_password)
 
-    # MySQL root password
-    read -p "Enter MySQL root password: " MYSQL_ROOT_PASSWORD
-    echo ""
+    # Use default values
+    EQEMU_DB_NAME="peqdb"
+    EQEMU_DB_USER="eqemu"
+    SERVER_LONG_NAME="EQEmu Server"
+    SERVER_SHORT_NAME="eqemu"
 
-    # Database configuration
-    read -p "Enter database name (lowercase, no special characters): " EQEMU_DB_NAME
-    read -p "Enter database username: " EQEMU_DB_USER
-    read -p "Enter database password: " EQEMU_DB_PASSWORD
-    echo ""
-
-    # Server configuration
-    read -p "Enter server long name (e.g., My EQEmu Server): " SERVER_LONG_NAME
-    read -p "Enter server short name (e.g., myserver): " SERVER_SHORT_NAME
-    echo ""
-
-    # Confirm settings
+    # Display configuration
     echo "==========================================================="
-    echo "Configuration Summary:"
+    echo "Auto-Generated Configuration:"
     echo "==========================================================="
     echo "Installation Directory: $EQEMU_INSTALL_DIR"
     echo "Database Name: $EQEMU_DB_NAME"
     echo "Database User: $EQEMU_DB_USER"
     echo "Server Long Name: $SERVER_LONG_NAME"
     echo "Server Short Name: $SERVER_SHORT_NAME"
+    echo ""
+    echo "Secure passwords have been auto-generated."
+    echo "All credentials will be saved to:"
+    echo "  /root/eqemu_credentials.txt"
+    echo "  $EQEMU_INSTALL_DIR/eqemu_credentials.txt"
     echo "==========================================================="
     echo ""
 
-    read -p "Continue with installation? (y/n): " confirm
-    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo "Installation cancelled"
-        exit 0
-    fi
+    # Save credentials to root home directory
+    cat > /root/eqemu_credentials.txt <<EOF
+=======================================================
+EverQuest Emulator Server - Installation Credentials
+=======================================================
+Generated: $(date)
+
+IMPORTANT: Keep this file secure and backed up!
+
+=======================================================
+System User Account
+=======================================================
+Username: eqemu
+Password: $EQEMU_USER_PASSWORD
+
+To login: su - eqemu
+Or via SSH: ssh eqemu@your-server-ip
+
+=======================================================
+MySQL/MariaDB Database
+=======================================================
+Root Password: $MYSQL_ROOT_PASSWORD
+Database Name: $EQEMU_DB_NAME
+Database User: $EQEMU_DB_USER
+Database Password: $EQEMU_DB_PASSWORD
+
+To connect: mysql -u $EQEMU_DB_USER -p $EQEMU_DB_NAME
+Root access: mysql -u root -p
+
+=======================================================
+Server Configuration
+=======================================================
+Server Long Name: $SERVER_LONG_NAME
+Server Short Name: $SERVER_SHORT_NAME
+Installation Directory: $EQEMU_INSTALL_DIR
+
+=======================================================
+Server Control
+=======================================================
+Start Server: cd $EQEMU_INSTALL_DIR/server && ./start.sh
+Stop Server: cd $EQEMU_INSTALL_DIR/server && ./stop.sh
+Check Status: cd $EQEMU_INSTALL_DIR/server && ./status.sh
+View Logs: tail -f $EQEMU_INSTALL_DIR/server/logs/*.log
+
+=======================================================
+Configuration Files
+=======================================================
+Main Config: $EQEMU_INSTALL_DIR/server/eqemu_config.json
+Login Config: $EQEMU_INSTALL_DIR/server/login.json
+
+=======================================================
+Creating a GM Account
+=======================================================
+1. Connect to your server and create a character
+2. Login to MySQL:
+   mysql -u $EQEMU_DB_USER -p$EQEMU_DB_PASSWORD $EQEMU_DB_NAME
+3. Set GM status:
+   UPDATE account SET status = 255 WHERE name = 'YourAccountName';
+4. Zone once to activate GM commands
+
+=======================================================
+Network Ports (Firewall Configuration)
+=======================================================
+Titanium Client: 5998/tcp
+SoD Client: 5999/tcp
+World Server: 9000/tcp
+Zone Servers: 7100-7400/tcp
+
+Example UFW commands:
+sudo ufw allow 5998/tcp
+sudo ufw allow 5999/tcp
+sudo ufw allow 9000/tcp
+sudo ufw allow 7100:7400/tcp
+
+=======================================================
+Support
+=======================================================
+GitHub: https://github.com/crucifix86/eqemu-universal-installer
+Forums: https://www.eqemulator.org/forums/
+
+=======================================================
+EOF
+
+    chmod 600 /root/eqemu_credentials.txt
+    echo "✅ Credentials saved to /root/eqemu_credentials.txt"
+    echo ""
 }
 
 #########################################################
@@ -535,6 +619,14 @@ EOF
     chown $EQEMU_USER:$EQEMU_USER "$EQEMU_INSTALL_DIR/install_variables.txt"
 
     echo "  Installation variables saved"
+
+    # Copy credentials file to eqemu home directory
+    if [ -f "/root/eqemu_credentials.txt" ]; then
+        cp /root/eqemu_credentials.txt "$EQEMU_INSTALL_DIR/eqemu_credentials.txt"
+        chown $EQEMU_USER:$EQEMU_USER "$EQEMU_INSTALL_DIR/eqemu_credentials.txt"
+        chmod 600 "$EQEMU_INSTALL_DIR/eqemu_credentials.txt"
+        echo "  Credentials copied to $EQEMU_INSTALL_DIR/eqemu_credentials.txt"
+    fi
 }
 
 #########################################################
@@ -549,7 +641,7 @@ main() {
     echo ""
 
     detect_os
-    collect_user_input
+    auto_generate_config
     create_eqemu_user
 
     # Install prerequisites based on OS
@@ -582,17 +674,28 @@ main() {
     echo "Installation completed successfully!"
     echo "==========================================================="
     echo ""
+    echo "⚠️  IMPORTANT: Your auto-generated credentials are saved to:"
+    echo "   /root/eqemu_credentials.txt"
+    echo "   $EQEMU_INSTALL_DIR/eqemu_credentials.txt"
+    echo ""
+    echo "   Please secure and backup this file!"
+    echo ""
+    echo "==========================================================="
+    echo ""
     echo "Installation Summary:"
     echo "  Installation Directory: $EQEMU_INSTALL_DIR"
     echo "  Server Directory: $EQEMU_SERVER_DIR"
     echo "  Database Name: $EQEMU_DB_NAME"
     echo "  Database User: $EQEMU_DB_USER"
     echo ""
+    echo "To view your credentials:"
+    echo "  cat /root/eqemu_credentials.txt"
+    echo ""
     echo "Next steps:"
-    echo "  1. Review the configuration files in $EQEMU_SERVER_DIR"
+    echo "  1. Review credentials: cat /root/eqemu_credentials.txt"
     echo "  2. Start the server: cd $EQEMU_SERVER_DIR && ./start.sh"
-    echo "  3. Check server status: ./status.sh"
-    echo "  4. Stop the server: ./stop.sh"
+    echo "  3. Check server status: cd $EQEMU_SERVER_DIR && ./status.sh"
+    echo "  4. View logs: tail -f $EQEMU_SERVER_DIR/logs/*.log"
     echo ""
     echo "For more information, see the README.md file"
     echo ""

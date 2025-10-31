@@ -1,6 +1,6 @@
 # EQEmu Universal Installer - Quick Start Guide
 
-## Ubuntu/Debian Quick Start
+## Ubuntu/Debian Quick Start (Fully Automated!)
 
 ```bash
 git clone https://github.com/crucifix86/eqemu-universal-installer.git
@@ -9,7 +9,13 @@ chmod +x install.sh scripts/install_linux.sh
 sudo ./install.sh
 ```
 
-Follow the prompts and wait 15-30 minutes for installation to complete.
+**No user input required!** The installer auto-generates all credentials and saves them to `/root/eqemu_credentials.txt`.
+
+Wait 15-30 minutes for installation to complete, then view your credentials:
+
+```bash
+cat /root/eqemu_credentials.txt
+```
 
 ---
 
@@ -50,21 +56,19 @@ Follow the prompts and wait 15-30 minutes for installation to complete.
    chmod +x install.sh scripts/install_linux.sh
    ```
 
-2. **Run the installer**:
+2. **Run the installer** (No input required!):
    ```bash
    sudo ./install.sh
    ```
 
-3. **Enter configuration** when prompted:
-   - eqemu user password: (create a password)
-   - MySQL root password: (create a password)
-   - Database name: `peqdb`
-   - Database user: `eqemu`
-   - Database password: (create a password)
-   - Server name: `My EQEmu Server`
-   - Server short name: `myserver`
+3. **Wait** for installation (15-30 minutes)
+   - All credentials are auto-generated
+   - Saved to `/root/eqemu_credentials.txt`
 
-4. **Wait** for installation (15-30 minutes)
+4. **View your credentials**:
+   ```bash
+   cat /root/eqemu_credentials.txt
+   ```
 
 5. **Start the server**:
    ```bash
