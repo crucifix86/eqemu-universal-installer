@@ -508,7 +508,7 @@ download_database() {
     echo "  Downloading database files..."
     wget -q --show-progress https://github.com/peqarchive/peqdatabase/archive/refs/heads/main.zip -O peqdatabase.zip
 
-    echo "  Extracting database..."
+    echo "  Extracting main archive..."
     unzip -q peqdatabase.zip
 
     # Check what was extracted
@@ -520,9 +520,26 @@ download_database() {
 
     rm peqdatabase.zip
 
+    # Extract the nested database ZIP file (peq-latest.zip or peq-TIMESTAMP.zip)
+    echo "  Extracting database files..."
+    local nested_zip=$(ls -1 peq*.zip 2>/dev/null | head -1)
+
+    if [ -n "$nested_zip" ] && [ -f "$nested_zip" ]; then
+        echo "  Found nested archive: $nested_zip"
+        unzip -q "$nested_zip"
+
+        # Move SQL files from peq-dump/ directory if it exists
+        if [ -d "peq-dump" ]; then
+            mv peq-dump/* . 2>/dev/null || true
+            rmdir peq-dump 2>/dev/null || true
+        fi
+
+        rm "$nested_zip"
+    fi
+
     # List what SQL files we have for debugging
     echo "  Available SQL files:"
-    ls -1 *.sql 2>/dev/null | head -5 || echo "  No .sql files found"
+    ls -1 *.sql 2>/dev/null | head -10 || echo "  No .sql files found"
 
     echo "  Database downloaded successfully"
 }
