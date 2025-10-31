@@ -638,10 +638,10 @@ update_config_files() {
         # Create a backup
         cp "$login_file" "$login_file.bak"
 
-        # Use sed to update the configuration
-        sed -i "s/\"db\": \".*\"/\"db\": \"$EQEMU_DB_NAME\"/" "$login_file"
-        sed -i "s/\"user\": \".*\"/\"user\": \"$EQEMU_DB_USER\"/" "$login_file"
-        sed -i "s/\"password\": \".*\"/\"password\": \"$EQEMU_DB_PASSWORD\"/" "$login_file"
+        # Use sed to update the configuration (match both with and without spaces around colon)
+        sed -i "s/\"db\" *: *\"[^\"]*\"/\"db\" : \"$EQEMU_DB_NAME\"/" "$login_file"
+        sed -i "s/\"user\" *: *\"[^\"]*\"/\"user\" : \"$EQEMU_DB_USER\"/" "$login_file"
+        sed -i "s/\"password\" *: *\"[^\"]*\"/\"password\" : \"$EQEMU_DB_PASSWORD\"/" "$login_file"
 
         echo "  Updated login.json"
     fi
