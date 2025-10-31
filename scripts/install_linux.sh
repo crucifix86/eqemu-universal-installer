@@ -239,35 +239,21 @@ install_perl_5321() {
         fi
     fi
 
-    # Create build directory
-    local build_dir="/tmp/perl-5.32.1-build"
-    mkdir -p "$build_dir"
-    cd "$build_dir"
+    # Download pre-compiled Perl 5.32.1 (saves 20-30 minutes!)
+    echo "  Downloading pre-compiled Perl 5.32.1 (18MB)..."
+    local temp_dir="/tmp/perl-install-$$"
+    mkdir -p "$temp_dir"
+    cd "$temp_dir"
 
-    # Download Perl 5.32.1
-    echo "  Downloading Perl 5.32.1 source..."
-    wget -q --show-progress https://www.cpan.org/src/5.0/perl-5.32.1.tar.gz
+    wget -q --show-progress https://raw.githubusercontent.com/crucifix86/eqemu-universal-installer/master/eqemu-perl-5.32.1-ubuntu24.04-x64.tar.gz
 
-    # Extract
-    echo "  Extracting Perl 5.32.1..."
-    tar -xzf perl-5.32.1.tar.gz
-    cd perl-5.32.1
-
-    # Configure
-    echo "  Configuring Perl 5.32.1 (this may take a few minutes)..."
-    ./Configure -des -Dprefix=/opt/eqemu-perl -Dusethreads -Duseshrplib > /dev/null 2>&1
-
-    # Build (use multiple cores)
-    echo "  Building Perl 5.32.1 (this will take 15-30 minutes)..."
-    make -j$(nproc) > /dev/null 2>&1
-
-    # Install
+    # Extract to /opt
     echo "  Installing Perl 5.32.1 to /opt/eqemu-perl..."
-    make install > /dev/null 2>&1
+    tar -xzf eqemu-perl-5.32.1-ubuntu24.04-x64.tar.gz -C /opt
 
     # Clean up
     cd /
-    rm -rf "$build_dir"
+    rm -rf "$temp_dir"
 
     # Export paths for later use
     export PERL_EXECUTABLE="/opt/eqemu-perl/bin/perl"
