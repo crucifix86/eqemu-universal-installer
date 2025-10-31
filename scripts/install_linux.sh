@@ -14,6 +14,11 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+# Suppress interactive prompts and kernel upgrade warnings
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
+
 # Installation variables
 export EQEMU_USER="eqemu"
 export EQEMU_INSTALL_DIR="/home/$EQEMU_USER"
@@ -21,7 +26,7 @@ export EQEMU_SERVER_DIR="$EQEMU_INSTALL_DIR/server"
 export EQEMU_BIN_DIR="$EQEMU_INSTALL_DIR/bin"
 export EQEMU_DB_DIR="$EQEMU_INSTALL_DIR/database"
 export EQEMU_SOURCE_DIR="$EQEMU_INSTALL_DIR/source"
-export APT_OPTIONS="-y -qq"
+export APT_OPTIONS="-y -qq -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
 
 echo "##########################################################"
 echo "#  EverQuest Emulator Linux Installer                   #"
@@ -231,6 +236,12 @@ create_eqemu_user() {
 install_debian_prereqs() {
     echo ""
     echo "[Step] Installing Debian/Ubuntu prerequisites..."
+
+    # Configure needrestart to avoid kernel upgrade prompts
+    if [ -d /etc/needrestart ]; then
+        echo "\$nrconf{restart} = 'a';" > /etc/needrestart/conf.d/50-eqemu-auto.conf
+        echo "\$nrconf{kernelhints} = 0;" >> /etc/needrestart/conf.d/50-eqemu-auto.conf
+    fi
 
     apt-get -y update
 
