@@ -14,6 +14,11 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+# Suppress interactive prompts and kernel upgrade warnings
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
+
 # Installation variables
 export EQEMU_USER="eqemu"
 export EQEMU_INSTALL_DIR="/home/$EQEMU_USER"
@@ -21,7 +26,7 @@ export EQEMU_SERVER_DIR="$EQEMU_INSTALL_DIR/server"
 export EQEMU_BIN_DIR="$EQEMU_INSTALL_DIR/bin"
 export EQEMU_DB_DIR="$EQEMU_INSTALL_DIR/database"
 export EQEMU_SOURCE_DIR="$EQEMU_INSTALL_DIR/source"
-export APT_OPTIONS="-y -qq"
+export APT_OPTIONS="-y -qq -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
 
 echo "##########################################################"
 echo "#  EverQuest Emulator Linux Installer                   #"
@@ -59,66 +64,154 @@ detect_os() {
 }
 
 #########################################################
-# Collect User Input
+# Generate Random Password
 #########################################################
 
-collect_user_input() {
+generate_password() {
+    # Generate a 16-character random password
+    openssl rand -base64 12 | tr -d "=+/" | cut -c1-16
+}
+
+#########################################################
+# Auto-Generate Configuration (No User Input Required)
+#########################################################
+
+auto_generate_config() {
     echo ""
     echo "==========================================================="
-    echo "Configuration Setup"
+    echo "Automatic Configuration Setup"
     echo "==========================================================="
     echo ""
-    echo "Please provide the following information:"
+    echo "Generating secure credentials automatically..."
     echo ""
 
     # Check if install_variables.txt exists
     if [ -f "$EQEMU_INSTALL_DIR/install_variables.txt" ]; then
         echo "Found existing installation configuration"
-        read -p "Do you want to use the existing configuration? (y/n): " use_existing
-        if [[ "$use_existing" == "y" || "$use_existing" == "Y" ]]; then
-            source "$EQEMU_INSTALL_DIR/install_variables.txt"
-            echo "Using existing configuration"
-            return
-        fi
+        echo "Loading existing credentials..."
+        source "$EQEMU_INSTALL_DIR/install_variables.txt"
+        echo "Using existing configuration"
+        return
     fi
 
-    # EQEmu user password
-    echo "Create password for Linux user 'eqemu':"
-    read -s EQEMU_USER_PASSWORD
-    echo ""
+    # Auto-generate passwords
+    EQEMU_USER_PASSWORD=$(generate_password)
+    MYSQL_ROOT_PASSWORD=$(generate_password)
+    EQEMU_DB_PASSWORD=$(generate_password)
 
-    # MySQL root password
-    read -p "Enter MySQL root password: " MYSQL_ROOT_PASSWORD
-    echo ""
+    # Use default values
+    EQEMU_DB_NAME="peqdb"
+    EQEMU_DB_USER="eqemu"
+    SERVER_LONG_NAME="EQEmu Server"
+    SERVER_SHORT_NAME="eqemu"
 
-    # Database configuration
-    read -p "Enter database name (lowercase, no special characters): " EQEMU_DB_NAME
-    read -p "Enter database username: " EQEMU_DB_USER
-    read -p "Enter database password: " EQEMU_DB_PASSWORD
-    echo ""
-
-    # Server configuration
-    read -p "Enter server long name (e.g., My EQEmu Server): " SERVER_LONG_NAME
-    read -p "Enter server short name (e.g., myserver): " SERVER_SHORT_NAME
-    echo ""
-
-    # Confirm settings
+    # Display configuration
     echo "==========================================================="
-    echo "Configuration Summary:"
+    echo "Auto-Generated Configuration:"
     echo "==========================================================="
     echo "Installation Directory: $EQEMU_INSTALL_DIR"
     echo "Database Name: $EQEMU_DB_NAME"
     echo "Database User: $EQEMU_DB_USER"
     echo "Server Long Name: $SERVER_LONG_NAME"
     echo "Server Short Name: $SERVER_SHORT_NAME"
+    echo ""
+    echo "Secure passwords have been auto-generated."
+    echo "All credentials will be saved to:"
+    echo "  /root/eqemu_credentials.txt"
+    echo "  $EQEMU_INSTALL_DIR/eqemu_credentials.txt"
     echo "==========================================================="
     echo ""
 
-    read -p "Continue with installation? (y/n): " confirm
-    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo "Installation cancelled"
-        exit 0
-    fi
+    # Save credentials to root home directory
+    cat > /root/eqemu_credentials.txt <<EOF
+=======================================================
+EverQuest Emulator Server - Installation Credentials
+=======================================================
+Generated: $(date)
+
+IMPORTANT: Keep this file secure and backed up!
+
+=======================================================
+System User Account
+=======================================================
+Username: eqemu
+Password: $EQEMU_USER_PASSWORD
+
+To login: su - eqemu
+Or via SSH: ssh eqemu@your-server-ip
+
+=======================================================
+MySQL/MariaDB Database
+=======================================================
+Root Password: $MYSQL_ROOT_PASSWORD
+Database Name: $EQEMU_DB_NAME
+Database User: $EQEMU_DB_USER
+Database Password: $EQEMU_DB_PASSWORD
+
+To connect: mysql -u $EQEMU_DB_USER -p $EQEMU_DB_NAME
+Root access: mysql -u root -p
+
+=======================================================
+Server Configuration
+=======================================================
+Server Long Name: $SERVER_LONG_NAME
+Server Short Name: $SERVER_SHORT_NAME
+Installation Directory: $EQEMU_INSTALL_DIR
+Server Public IP: Check eqemu_config.json for current value
+
+To view configured IP:
+grep '"address"' $EQEMU_INSTALL_DIR/server/eqemu_config.json | head -1
+
+=======================================================
+Server Control
+=======================================================
+Start Server: cd $EQEMU_INSTALL_DIR/server && ./start.sh
+Stop Server: cd $EQEMU_INSTALL_DIR/server && ./stop.sh
+Check Status: cd $EQEMU_INSTALL_DIR/server && ./status.sh
+View Logs: tail -f $EQEMU_INSTALL_DIR/server/logs/*.log
+
+=======================================================
+Configuration Files
+=======================================================
+Main Config: $EQEMU_INSTALL_DIR/server/eqemu_config.json
+Login Config: $EQEMU_INSTALL_DIR/server/login.json
+
+=======================================================
+Creating a GM Account
+=======================================================
+1. Connect to your server and create a character
+2. Login to MySQL:
+   mysql -u $EQEMU_DB_USER -p$EQEMU_DB_PASSWORD $EQEMU_DB_NAME
+3. Set GM status:
+   UPDATE account SET status = 255 WHERE name = 'YourAccountName';
+4. Zone once to activate GM commands
+
+=======================================================
+Network Ports (Firewall Configuration)
+=======================================================
+Titanium Client: 5998/tcp
+SoD Client: 5999/tcp
+World Server: 9000/tcp
+Zone Servers: 7100-7400/tcp
+
+Example UFW commands:
+sudo ufw allow 5998/tcp
+sudo ufw allow 5999/tcp
+sudo ufw allow 9000/tcp
+sudo ufw allow 7100:7400/tcp
+
+=======================================================
+Support
+=======================================================
+GitHub: https://github.com/crucifix86/eqemu-universal-installer
+Forums: https://www.eqemulator.org/forums/
+
+=======================================================
+EOF
+
+    chmod 600 /root/eqemu_credentials.txt
+    echo "✅ Credentials saved to /root/eqemu_credentials.txt"
+    echo ""
 }
 
 #########################################################
@@ -147,6 +240,12 @@ create_eqemu_user() {
 install_debian_prereqs() {
     echo ""
     echo "[Step] Installing Debian/Ubuntu prerequisites..."
+
+    # Configure needrestart to avoid kernel upgrade prompts
+    if [ -d /etc/needrestart ]; then
+        echo "\$nrconf{restart} = 'a';" > /etc/needrestart/conf.d/50-eqemu-auto.conf
+        echo "\$nrconf{kernelhints} = 0;" >> /etc/needrestart/conf.d/50-eqemu-auto.conf
+    fi
 
     apt-get -y update
 
@@ -220,7 +319,7 @@ install_fedora_prereqs() {
 }
 
 #########################################################
-# Install Perl 5.32.1 for EQEmu
+# Setup Perl Symlinks for Pre-compiled Binaries
 #########################################################
 
 install_perl_5321() {
@@ -342,14 +441,23 @@ download_server_files() {
     echo ""
     echo "[Step] Downloading server files from GitHub..."
 
-    # Clone the repository to a temporary location
+    # Check if we're running from the cloned repository
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local repo_root="$(dirname "$script_dir")"
+
+    if [ -d "$repo_root/install" ]; then
+        echo "  Using local install directory from repository..."
+        cp -r "$repo_root/install"/* "$EQEMU_SERVER_DIR/"
+        echo "  Server files copied successfully"
+        return 0
+    fi
+
+    # Not in repo, need to clone
     local temp_dir="/tmp/eqemu_installer_$$"
     mkdir -p "$temp_dir"
 
-    echo "  Cloning repository..."
-    if git clone --depth 1 https://github.com/crucifix86/eqemu-universal-installer.git "$temp_dir" 2>&1 | grep -v "^Cloning"; then
-        echo "  Repository cloned successfully"
-
+    echo "  Cloning repository from GitHub..."
+    if git clone --depth 1 https://github.com/crucifix86/eqemu-universal-installer.git "$temp_dir" 2>&1; then
         # Copy the install directory
         if [ -d "$temp_dir/install" ]; then
             echo "  Copying server files..."
@@ -427,7 +535,7 @@ compile_server_from_source() {
 }
 
 #########################################################
-# Download Server Binaries (Legacy - not used when Perl 5.32.1 is installed)
+# Download Server Binaries
 #########################################################
 
 download_server_binaries() {
@@ -516,11 +624,38 @@ download_database() {
     echo "  Downloading database files..."
     wget -q --show-progress https://github.com/peqarchive/peqdatabase/archive/refs/heads/main.zip -O peqdatabase.zip
 
-    echo "  Extracting database..."
+    echo "  Extracting main archive..."
     unzip -q peqdatabase.zip
-    mv peqdatabase-main/* .
-    rmdir peqdatabase-main
+
+    # Check what was extracted
+    if [ -d "peqdatabase-main" ]; then
+        mv peqdatabase-main/* . 2>/dev/null || true
+        mv peqdatabase-main/.* . 2>/dev/null || true
+        rmdir peqdatabase-main 2>/dev/null || true
+    fi
+
     rm peqdatabase.zip
+
+    # Extract the nested database ZIP file (peq-latest.zip or peq-TIMESTAMP.zip)
+    echo "  Extracting database files..."
+    local nested_zip=$(ls -1 peq*.zip 2>/dev/null | head -1)
+
+    if [ -n "$nested_zip" ] && [ -f "$nested_zip" ]; then
+        echo "  Found nested archive: $nested_zip"
+        unzip -q "$nested_zip"
+
+        # Move SQL files from peq-dump/ directory if it exists
+        if [ -d "peq-dump" ]; then
+            mv peq-dump/* . 2>/dev/null || true
+            rmdir peq-dump 2>/dev/null || true
+        fi
+
+        rm "$nested_zip"
+    fi
+
+    # List what SQL files we have for debugging
+    echo "  Available SQL files:"
+    ls -1 *.sql 2>/dev/null | head -10 || echo "  No .sql files found"
 
     echo "  Database downloaded successfully"
 }
@@ -535,13 +670,38 @@ import_database() {
 
     cd "$EQEMU_DB_DIR"
 
-    if [ -f "create_all_tables.sql" ]; then
-        echo "  Importing database schema..."
-        mysql -u"$EQEMU_DB_USER" -p"$EQEMU_DB_PASSWORD" "$EQEMU_DB_NAME" < create_all_tables.sql
+    # Try to find the main SQL file - PEQ database uses different naming conventions
+    local sql_file=""
+
+    # Check for common PEQ database file patterns
+    if [ -f "peq.sql" ]; then
+        sql_file="peq.sql"
+    elif [ -f "create_all_tables.sql" ]; then
+        sql_file="create_all_tables.sql"
+    else
+        # Look for any .sql file that might be the main database dump
+        # Typically named like peq-TIMESTAMP.sql or similar
+        sql_file=$(ls -1 peq*.sql 2>/dev/null | head -1)
+
+        if [ -z "$sql_file" ]; then
+            # Try to find any large SQL file
+            sql_file=$(ls -1S *.sql 2>/dev/null | head -1)
+        fi
+    fi
+
+    if [ -n "$sql_file" ] && [ -f "$sql_file" ]; then
+        echo "  Found database file: $sql_file"
+        echo "  Importing database (this may take several minutes)..."
+        mysql -u"$EQEMU_DB_USER" -p"$EQEMU_DB_PASSWORD" "$EQEMU_DB_NAME" < "$sql_file"
         echo "  Database imported successfully"
     else
-        echo "  Warning: create_all_tables.sql not found"
+        echo "  Error: Could not find database SQL file"
+        echo "  Files in $EQEMU_DB_DIR:"
+        ls -lh *.sql 2>/dev/null || echo "  No SQL files found"
+        echo ""
         echo "  You will need to import the database manually"
+        echo "  See: /root/eqemu_credentials.txt for instructions"
+        return 1
     fi
 
     # Add world server entry
@@ -554,12 +714,50 @@ EOF
 }
 
 #########################################################
+# Detect Public IP Address
+#########################################################
+
+detect_public_ip() {
+    local public_ip=""
+
+    # Try multiple methods to detect public IP
+    # Method 1: Use curl with ipify.org
+    public_ip=$(curl -4 -s --max-time 5 https://api.ipify.org 2>/dev/null)
+
+    # Method 2: Use curl with icanhazip.com
+    if [ -z "$public_ip" ]; then
+        public_ip=$(curl -4 -s --max-time 5 https://icanhazip.com 2>/dev/null | tr -d '\n')
+    fi
+
+    # Method 3: Use dig with OpenDNS
+    if [ -z "$public_ip" ] && command -v dig &> /dev/null; then
+        public_ip=$(dig +short myip.opendns.com @resolver1.opendns.com 2>/dev/null)
+    fi
+
+    # Method 4: Check if we have a non-loopback IP on network interfaces
+    if [ -z "$public_ip" ] && command -v hostname &> /dev/null; then
+        public_ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    fi
+
+    # Validate IP format
+    if [[ $public_ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        echo "$public_ip"
+    else
+        echo "127.0.0.1"
+    fi
+}
+
+#########################################################
 # Update Configuration Files
 #########################################################
 
 update_config_files() {
     echo ""
     echo "[Step] Updating configuration files..."
+
+    # Detect public IP address
+    local public_ip=$(detect_public_ip)
+    echo "  Detected public IP: $public_ip"
 
     # Update eqemu_config.json
     local config_file="$EQEMU_SERVER_DIR/eqemu_config.json"
@@ -574,7 +772,15 @@ update_config_files() {
         sed -i "s/\"longname\": \".*\"/\"longname\": \"$SERVER_LONG_NAME\"/" "$config_file"
         sed -i "s/\"shortname\": \".*\"/\"shortname\": \"$SERVER_SHORT_NAME\"/" "$config_file"
 
+        # Update public IP address in world.address (within the world section)
+        # This is the IP clients will use to connect
+        sed -i "0,/\"address\": \".*\"/ s/\"address\": \".*\"/\"address\": \"$public_ip\"/" "$config_file"
+
+        # Update world TCP IP for zone server connections
+        sed -i "s/\"tcp\": {[^}]*\"ip\": \"[^\"]*\"/\"tcp\": {\"ip\": \"$public_ip\"/" "$config_file"
+
         echo "  Updated eqemu_config.json"
+        echo "  Set public address to: $public_ip"
     fi
 
     # Update login.json
@@ -583,10 +789,10 @@ update_config_files() {
         # Create a backup
         cp "$login_file" "$login_file.bak"
 
-        # Use sed to update the configuration
-        sed -i "s/\"db\": \".*\"/\"db\": \"$EQEMU_DB_NAME\"/" "$login_file"
-        sed -i "s/\"user\": \".*\"/\"user\": \"$EQEMU_DB_USER\"/" "$login_file"
-        sed -i "s/\"password\": \".*\"/\"password\": \"$EQEMU_DB_PASSWORD\"/" "$login_file"
+        # Use sed to update the configuration (match both with and without spaces around colon)
+        sed -i "s/\"db\" *: *\"[^\"]*\"/\"db\" : \"$EQEMU_DB_NAME\"/" "$login_file"
+        sed -i "s/\"user\" *: *\"[^\"]*\"/\"user\" : \"$EQEMU_DB_USER\"/" "$login_file"
+        sed -i "s/\"password\" *: *\"[^\"]*\"/\"password\" : \"$EQEMU_DB_PASSWORD\"/" "$login_file"
 
         echo "  Updated login.json"
     fi
@@ -636,6 +842,14 @@ EOF
     chown $EQEMU_USER:$EQEMU_USER "$EQEMU_INSTALL_DIR/install_variables.txt"
 
     echo "  Installation variables saved"
+
+    # Copy credentials file to eqemu home directory
+    if [ -f "/root/eqemu_credentials.txt" ]; then
+        cp /root/eqemu_credentials.txt "$EQEMU_INSTALL_DIR/eqemu_credentials.txt"
+        chown $EQEMU_USER:$EQEMU_USER "$EQEMU_INSTALL_DIR/eqemu_credentials.txt"
+        chmod 600 "$EQEMU_INSTALL_DIR/eqemu_credentials.txt"
+        echo "  Credentials copied to $EQEMU_INSTALL_DIR/eqemu_credentials.txt"
+    fi
 }
 
 #########################################################
@@ -650,7 +864,7 @@ main() {
     echo ""
 
     detect_os
-    collect_user_input
+    auto_generate_config
     create_eqemu_user
 
     # Install prerequisites based on OS
@@ -666,9 +880,7 @@ main() {
             ;;
     esac
 
-    # Install Perl 5.32.1 for EQEmu compatibility
     install_perl_5321
-
     configure_mariadb
     create_directories
     download_server_files
@@ -686,18 +898,28 @@ main() {
     echo "Installation completed successfully!"
     echo "==========================================================="
     echo ""
+    echo "⚠️  IMPORTANT: Your auto-generated credentials are saved to:"
+    echo "   /root/eqemu_credentials.txt"
+    echo "   $EQEMU_INSTALL_DIR/eqemu_credentials.txt"
+    echo ""
+    echo "   Please secure and backup this file!"
+    echo ""
+    echo "==========================================================="
+    echo ""
     echo "Installation Summary:"
     echo "  Installation Directory: $EQEMU_INSTALL_DIR"
     echo "  Server Directory: $EQEMU_SERVER_DIR"
     echo "  Database Name: $EQEMU_DB_NAME"
     echo "  Database User: $EQEMU_DB_USER"
-    echo "  Perl Version: 5.32.1 (installed at /opt/eqemu-perl)"
+    echo ""
+    echo "To view your credentials:"
+    echo "  cat /root/eqemu_credentials.txt"
     echo ""
     echo "Next steps:"
-    echo "  1. Review the configuration files in $EQEMU_SERVER_DIR"
+    echo "  1. Review credentials: cat /root/eqemu_credentials.txt"
     echo "  2. Start the server: cd $EQEMU_SERVER_DIR && ./start.sh"
-    echo "  3. Check server status: ./status.sh"
-    echo "  4. Stop the server: ./stop.sh"
+    echo "  3. Check server status: cd $EQEMU_SERVER_DIR && ./status.sh"
+    echo "  4. View logs: tail -f $EQEMU_SERVER_DIR/logs/*.log"
     echo ""
     echo "For more information, see the README.md file"
     echo ""
