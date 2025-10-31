@@ -166,14 +166,39 @@ function Setup-ServerFiles {
         }
     }
 
-    # Copy install files
-    $sourceInstallDir = Join-Path $PSScriptRoot "..\install"
-    if (Test-Path $sourceInstallDir) {
-        Write-Host "  Copying server files..." -ForegroundColor Gray
-        Copy-Item -Path "$sourceInstallDir\*" -Destination "$InstallPath\server" -Recurse -Force
-        Write-Host "  Server files copied successfully" -ForegroundColor Gray
-    } else {
-        Write-Host "  Warning: Install directory not found at $sourceInstallDir" -ForegroundColor Yellow
+    # Download install files from GitHub
+    $tempDir = "$env:TEMP\eqemu_installer_$([System.Guid]::NewGuid())"
+
+    try {
+        Write-Host "  Downloading server files from GitHub..." -ForegroundColor Gray
+
+        # Clone the repository
+        $cloneResult = & git clone --depth 1 https://github.com/crucifix86/eqemu-universal-installer.git $tempDir 2>&1
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  Repository cloned successfully" -ForegroundColor Gray
+
+            # Copy the install directory
+            $sourceInstallDir = Join-Path $tempDir "install"
+            if (Test-Path $sourceInstallDir) {
+                Write-Host "  Copying server files..." -ForegroundColor Gray
+                Copy-Item -Path "$sourceInstallDir\*" -Destination "$InstallPath\server" -Recurse -Force
+                Write-Host "  Server files copied successfully" -ForegroundColor Gray
+            } else {
+                Write-Host "  Error: Install directory not found in repository" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "  Error: Failed to clone repository" -ForegroundColor Red
+            Write-Host "  Please check your internet connection and try again" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "  Error downloading server files: $_" -ForegroundColor Red
+        Write-Host "  You will need to download them manually" -ForegroundColor Yellow
+    } finally {
+        # Clean up
+        if (Test-Path $tempDir) {
+            Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 

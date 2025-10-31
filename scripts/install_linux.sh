@@ -289,22 +289,39 @@ create_directories() {
 }
 
 #########################################################
-# Copy Server Files
+# Download Server Files from GitHub
 #########################################################
 
-copy_server_files() {
+download_server_files() {
     echo ""
-    echo "[Step] Copying server files..."
+    echo "[Step] Downloading server files from GitHub..."
 
-    local source_dir="$(dirname "$(dirname "$(readlink -f "$0")")")/install"
+    # Clone the repository to a temporary location
+    local temp_dir="/tmp/eqemu_installer_$$"
+    mkdir -p "$temp_dir"
 
-    if [ -d "$source_dir" ]; then
-        echo "  Copying from: $source_dir"
-        cp -r "$source_dir"/* "$EQEMU_SERVER_DIR/"
-        echo "  Server files copied successfully"
+    echo "  Cloning repository..."
+    if git clone --depth 1 https://github.com/crucifix86/eqemu-universal-installer.git "$temp_dir" 2>&1 | grep -v "^Cloning"; then
+        echo "  Repository cloned successfully"
+
+        # Copy the install directory
+        if [ -d "$temp_dir/install" ]; then
+            echo "  Copying server files..."
+            cp -r "$temp_dir/install"/* "$EQEMU_SERVER_DIR/"
+            echo "  Server files copied successfully"
+        else
+            echo "  Error: Install directory not found in repository"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+
+        # Clean up
+        rm -rf "$temp_dir"
     else
-        echo "  Warning: Install directory not found at $source_dir"
-        echo "  You will need to copy server files manually"
+        echo "  Error: Failed to clone repository"
+        echo "  Please check your internet connection and try again"
+        rm -rf "$temp_dir"
+        return 1
     fi
 }
 
@@ -550,7 +567,7 @@ main() {
 
     configure_mariadb
     create_directories
-    copy_server_files
+    download_server_files
     download_server_binaries
     create_symlinks
     download_maps
