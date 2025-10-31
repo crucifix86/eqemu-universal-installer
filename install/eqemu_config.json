@@ -22,6 +22,15 @@
    "port": "3306",
    "username": "eqemu"
   },
+  "launcher": {
+   "runsharedmemory": "true",
+   "timers": {
+    "restart": "10800"
+   },
+   "zones": {
+    "dynamiclimit": "30"
+   }
+  },
   "ucs": {
    "host": "127.0.0.1",
    "port": "7778"
