@@ -1,35 +1,61 @@
 # EQEmu Universal Installer - Quick Start Guide
 
-## Windows Installation (5 Steps)
+## Ubuntu/Debian Quick Start
 
-1. **Right-click** `install.bat` and select **"Run as administrator"**
+```bash
+git clone https://github.com/crucifix86/eqemu-universal-installer.git
+cd eqemu-universal-installer
+chmod +x install.sh scripts/install_linux.sh
+sudo ./install.sh
+```
 
-2. **Enter configuration** when prompted:
+Follow the prompts and wait 15-30 minutes for installation to complete.
+
+---
+
+## Windows Installation (6 Steps)
+
+1. **Clone the repository**:
+   ```powershell
+   git clone https://github.com/crucifix86/eqemu-universal-installer.git
+   cd eqemu-universal-installer
+   ```
+
+2. **Right-click** `install.bat` and select **"Run as administrator"**
+
+3. **Enter configuration** when prompted:
    - Database name: `peqdb`
    - Database user: `eqemu`
    - Database password: (create a secure password)
    - Server name: `My EQEmu Server`
    - Server short name: `myserver`
 
-3. **Wait** for installation (15-30 minutes)
+4. **Wait** for installation (15-30 minutes)
 
-4. **Start the server**:
+5. **Start the server**:
    ```
    cd C:\EQEmu\server
    Copy the executables from C:\EQEmu\bin to C:\EQEmu\server
    Run the server executables
    ```
 
-5. **Connect** with your EQ client to `127.0.0.1`
+6. **Connect** with your EQ client to `127.0.0.1`
 
-## Linux Installation (5 Steps)
+## Linux Installation (6 Steps)
 
-1. **Run the installer**:
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/crucifix86/eqemu-universal-installer.git
+   cd eqemu-universal-installer
+   chmod +x install.sh scripts/install_linux.sh
+   ```
+
+2. **Run the installer**:
    ```bash
    sudo ./install.sh
    ```
 
-2. **Enter configuration** when prompted:
+3. **Enter configuration** when prompted:
    - eqemu user password: (create a password)
    - MySQL root password: (create a password)
    - Database name: `peqdb`
@@ -38,16 +64,16 @@
    - Server name: `My EQEmu Server`
    - Server short name: `myserver`
 
-3. **Wait** for installation (15-30 minutes)
+4. **Wait** for installation (15-30 minutes)
 
-4. **Start the server**:
+5. **Start the server**:
    ```bash
    su - eqemu
    cd /home/eqemu/server
    ./start.sh
    ```
 
-5. **Connect** with your EQ client to your server IP
+6. **Connect** with your EQ client to your server IP
 
 ## Creating a GM Account
 
