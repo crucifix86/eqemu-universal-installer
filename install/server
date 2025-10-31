@@ -1,0 +1,421 @@
+#!/usr/bin/env bash
+
+#########################################################
+# EQEmu Server Management Script
+# Usage: ./server [start|stop|status|zones|log]
+#########################################################
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+#########################################################
+# Helper Functions
+#########################################################
+
+print_header() {
+    echo -e "${CYAN}========================================${NC}"
+    echo -e "${CYAN}$1${NC}"
+    echo -e "${CYAN}========================================${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}!${NC} $1"
+}
+
+print_info() {
+    echo -e "${BLUE}→${NC} $1"
+}
+
+#########################################################
+# Start Server
+#########################################################
+
+start_server() {
+    print_header "Starting EQEmu Server"
+
+    # Check if already running
+    if pgrep -x "world" > /dev/null; then
+        print_warning "Server appears to be already running"
+        echo ""
+        show_status
+        return
+    fi
+
+    echo ""
+    print_info "Starting shared memory loader..."
+    if [ -f "./shared_memory" ]; then
+        ./shared_memory
+        print_success "Shared memory loaded"
+    else
+        print_error "shared_memory binary not found"
+    fi
+
+    sleep 1
+
+    print_info "Starting login server..."
+    if [ -f "./loginserver" ]; then
+        ./loginserver &
+        sleep 1
+        print_success "Login server started (PID: $(pgrep -x loginserver))"
+    else
+        print_error "loginserver binary not found"
+    fi
+
+    print_info "Starting world server..."
+    if [ -f "./world" ]; then
+        ./world &
+        sleep 2
+        print_success "World server started (PID: $(pgrep -x world))"
+    else
+        print_error "world binary not found"
+    fi
+
+    print_info "Starting UCS (chat server)..."
+    if [ -f "./ucs" ]; then
+        ./ucs &
+        sleep 1
+        print_success "UCS started (PID: $(pgrep -x ucs))"
+    else
+        print_error "ucs binary not found"
+    fi
+
+    print_info "Starting zone launcher..."
+    if [ -f "./eqlaunch" ]; then
+        ./eqlaunch zone &
+        sleep 2
+        print_success "Zone launcher started (PID: $(pgrep -x eqlaunch))"
+    else
+        print_error "eqlaunch binary not found"
+    fi
+
+    print_info "Starting query server..."
+    if [ -f "./queryserv" ]; then
+        ./queryserv &
+        sleep 1
+        print_success "Query server started (PID: $(pgrep -x queryserv))"
+    else
+        print_warning "queryserv binary not found (optional)"
+    fi
+
+    echo ""
+    print_success "Server startup complete!"
+    echo ""
+
+    sleep 2
+    show_status
+}
+
+#########################################################
+# Stop Server
+#########################################################
+
+stop_server() {
+    print_header "Stopping EQEmu Server"
+    echo ""
+
+    # Stop in reverse order
+    print_info "Stopping query server..."
+    pkill -x queryserv && print_success "Query server stopped" || print_warning "Query server not running"
+
+    print_info "Stopping zone processes..."
+    pkill -x zone && print_success "Zone processes stopped" || print_warning "No zones running"
+    sleep 1
+
+    print_info "Stopping zone launcher..."
+    pkill -x eqlaunch && print_success "Zone launcher stopped" || print_warning "Zone launcher not running"
+
+    print_info "Stopping UCS..."
+    pkill -x ucs && print_success "UCS stopped" || print_warning "UCS not running"
+
+    print_info "Stopping world server..."
+    pkill -x world && print_success "World server stopped" || print_warning "World server not running"
+
+    print_info "Stopping login server..."
+    pkill -x loginserver && print_success "Login server stopped" || print_warning "Login server not running"
+
+    echo ""
+    print_success "Server shutdown complete!"
+}
+
+#########################################################
+# Show Status
+#########################################################
+
+show_status() {
+    print_header "EQEmu Server Status"
+    echo ""
+
+    # Check if any EQEmu processes are running
+    if ! pgrep -x "world\|loginserver\|ucs\|eqlaunch\|zone\|queryserv" > /dev/null 2>&1; then
+        print_error "Server is not running"
+        echo ""
+        return
+    fi
+
+    print_success "Server is running"
+    echo ""
+
+    # Format: Name, PID, CPU%, MEM%, Status
+    printf "%-20s %-8s %-8s %-8s %s\n" "PROCESS" "PID" "CPU%" "MEM%" "STATUS"
+    echo "------------------------------------------------------------------------"
+
+    # Check each process
+    check_process "loginserver" "Login Server"
+    check_process "world" "World Server"
+    check_process "ucs" "Chat Server (UCS)"
+    check_process "eqlaunch" "Zone Launcher"
+    check_process "queryserv" "Query Server"
+
+    # Count zone processes
+    zone_count=$(pgrep -x zone | wc -l)
+    if [ $zone_count -gt 0 ]; then
+        # Show aggregate zone stats
+        zone_cpu=$(ps aux | grep -E "^\S+\s+\S+.*./zone" | grep -v grep | awk '{sum+=$3} END {printf "%.1f", sum}')
+        zone_mem=$(ps aux | grep -E "^\S+\s+\S+.*./zone" | grep -v grep | awk '{sum+=$4} END {printf "%.1f", sum}')
+        printf "${GREEN}%-20s${NC} %-8s %-8s %-8s %s\n" "Zone Processes" "$zone_count" "${zone_cpu}%" "${zone_mem}%" "RUNNING"
+    else
+        printf "${YELLOW}%-20s${NC} %-8s %-8s %-8s %s\n" "Zone Processes" "0" "-" "-" "NOT RUNNING"
+    fi
+
+    echo ""
+
+    # System resources
+    print_info "System Resources:"
+    echo ""
+    printf "  %-20s %s\n" "Total CPU Usage:" "$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}')"
+    printf "  %-20s %s\n" "Memory Usage:" "$(free -h | awk '/^Mem:/ {print $3 " / " $2}')"
+    printf "  %-20s %s\n" "Disk Usage:" "$(df -h . | awk 'NR==2 {print $3 " / " $2 " (" $5 ")"}')"
+    echo ""
+}
+
+check_process() {
+    local process_name=$1
+    local display_name=$2
+
+    if pgrep -x "$process_name" > /dev/null; then
+        local pid=$(pgrep -x "$process_name" | head -1)
+        local cpu=$(ps aux | grep -E "^\S+\s+$pid\s+" | awk '{print $3}')
+        local mem=$(ps aux | grep -E "^\S+\s+$pid\s+" | awk '{print $4}')
+        printf "${GREEN}%-20s${NC} %-8s %-8s %-8s %s\n" "$display_name" "$pid" "${cpu}%" "${mem}%" "RUNNING"
+    else
+        printf "${YELLOW}%-20s${NC} %-8s %-8s %-8s %s\n" "$display_name" "-" "-" "-" "NOT RUNNING"
+    fi
+}
+
+#########################################################
+# Zone Management
+#########################################################
+
+manage_zones() {
+    print_header "Zone Management"
+    echo ""
+
+    if ! pgrep -x "eqlaunch" > /dev/null; then
+        print_error "Zone launcher (eqlaunch) is not running!"
+        print_info "Start the server first with: ./server start"
+        echo ""
+        return
+    fi
+
+    while true; do
+        echo ""
+        print_info "Current Zone Processes:"
+        echo ""
+
+        # Show running zones
+        if pgrep -x zone > /dev/null; then
+            ps aux | grep -E "^\S+\s+\S+.*./zone" | grep -v grep | \
+            awk '{printf "  %-8s %-15s CPU: %-6s MEM: %-6s %s %s\n", $2, $11, $3"%", $4"%", $12, $13}'
+        else
+            print_warning "No zone processes currently running"
+        fi
+
+        echo ""
+        echo "Options:"
+        echo "  1) View zone boot log"
+        echo "  2) Show zone launcher status"
+        echo "  3) Restart zone launcher"
+        echo "  4) Kill all zones"
+        echo "  5) Back to main menu"
+        echo ""
+        read -p "Select option [1-5]: " choice
+
+        case $choice in
+            1)
+                if [ -f "logs/zone-dynamic_01.log" ]; then
+                    print_info "Showing recent zone boot log..."
+                    echo ""
+                    tail -50 logs/zone-dynamic_01.log
+                else
+                    print_error "Zone log not found"
+                fi
+                ;;
+            2)
+                print_info "Zone Launcher Status:"
+                check_process "eqlaunch" "Zone Launcher"
+                ;;
+            3)
+                print_info "Restarting zone launcher..."
+                pkill -x eqlaunch
+                sleep 2
+                if [ -f "./eqlaunch" ]; then
+                    ./eqlaunch zone &
+                    sleep 2
+                    print_success "Zone launcher restarted"
+                fi
+                ;;
+            4)
+                print_warning "Killing all zone processes..."
+                pkill -x zone
+                print_success "All zones killed"
+                ;;
+            5)
+                return
+                ;;
+            *)
+                print_error "Invalid option"
+                ;;
+        esac
+
+        echo ""
+        read -p "Press Enter to continue..."
+    done
+}
+
+#########################################################
+# Log Viewer
+#########################################################
+
+view_logs() {
+    print_header "EQEmu Server Logs"
+    echo ""
+
+    if [ ! -d "logs" ]; then
+        print_error "Logs directory not found"
+        return
+    fi
+
+    while true; do
+        echo ""
+        echo "Available logs:"
+        echo "  1) World Server"
+        echo "  2) Zone (dynamic_01)"
+        echo "  3) Zone (dynamic_02)"
+        echo "  4) Zone (dynamic_03)"
+        echo "  5) Zone (dynamic_04)"
+        echo "  6) Zone (dynamic_05)"
+        echo "  7) All logs (tail -f)"
+        echo "  8) Back to main menu"
+        echo ""
+        read -p "Select log [1-8]: " choice
+
+        case $choice in
+            1)
+                if [ -f "logs/eqemu_world.log" ]; then
+                    tail -100 logs/eqemu_world.log
+                    echo ""
+                    read -p "Follow this log? (y/n): " follow
+                    if [ "$follow" = "y" ]; then
+                        tail -f logs/eqemu_world.log
+                    fi
+                else
+                    print_error "World log not found"
+                fi
+                ;;
+            2|3|4|5|6)
+                local zone_num=$(($choice - 1))
+                if [ -f "logs/zone-dynamic_0$zone_num.log" ]; then
+                    tail -100 logs/zone-dynamic_0$zone_num.log
+                    echo ""
+                    read -p "Follow this log? (y/n): " follow
+                    if [ "$follow" = "y" ]; then
+                        tail -f logs/zone-dynamic_0$zone_num.log
+                    fi
+                else
+                    print_error "Zone log not found"
+                fi
+                ;;
+            7)
+                print_info "Following all logs (Ctrl+C to stop)..."
+                sleep 2
+                tail -f logs/*.log 2>/dev/null
+                ;;
+            8)
+                return
+                ;;
+            *)
+                print_error "Invalid option"
+                ;;
+        esac
+
+        echo ""
+        read -p "Press Enter to continue..."
+    done
+}
+
+#########################################################
+# Main Menu
+#########################################################
+
+show_usage() {
+    echo "EQEmu Server Management Script"
+    echo ""
+    echo "Usage: ./server [command]"
+    echo ""
+    echo "Commands:"
+    echo "  start     Start the server"
+    echo "  stop      Stop the server"
+    echo "  status    Show server status with CPU/memory usage"
+    echo "  zones     Manage zone processes"
+    echo "  log       View server logs"
+    echo "  restart   Restart the server"
+    echo ""
+}
+
+#########################################################
+# Main
+#########################################################
+
+case "$1" in
+    start)
+        start_server
+        ;;
+    stop)
+        stop_server
+        ;;
+    status)
+        show_status
+        ;;
+    zones)
+        manage_zones
+        ;;
+    log)
+        view_logs
+        ;;
+    restart)
+        stop_server
+        echo ""
+        sleep 3
+        start_server
+        ;;
+    *)
+        show_usage
+        exit 1
+        ;;
+esac
