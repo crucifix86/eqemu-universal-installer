@@ -157,6 +157,10 @@ Server Configuration
 Server Long Name: $SERVER_LONG_NAME
 Server Short Name: $SERVER_SHORT_NAME
 Installation Directory: $EQEMU_INSTALL_DIR
+Server Public IP: Check eqemu_config.json for current value
+
+To view configured IP:
+grep '"address"' $EQEMU_INSTALL_DIR/server/eqemu_config.json | head -1
 
 =======================================================
 Server Control
@@ -609,12 +613,50 @@ EOF
 }
 
 #########################################################
+# Detect Public IP Address
+#########################################################
+
+detect_public_ip() {
+    local public_ip=""
+
+    # Try multiple methods to detect public IP
+    # Method 1: Use curl with ipify.org
+    public_ip=$(curl -4 -s --max-time 5 https://api.ipify.org 2>/dev/null)
+
+    # Method 2: Use curl with icanhazip.com
+    if [ -z "$public_ip" ]; then
+        public_ip=$(curl -4 -s --max-time 5 https://icanhazip.com 2>/dev/null | tr -d '\n')
+    fi
+
+    # Method 3: Use dig with OpenDNS
+    if [ -z "$public_ip" ] && command -v dig &> /dev/null; then
+        public_ip=$(dig +short myip.opendns.com @resolver1.opendns.com 2>/dev/null)
+    fi
+
+    # Method 4: Check if we have a non-loopback IP on network interfaces
+    if [ -z "$public_ip" ] && command -v hostname &> /dev/null; then
+        public_ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    fi
+
+    # Validate IP format
+    if [[ $public_ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        echo "$public_ip"
+    else
+        echo "127.0.0.1"
+    fi
+}
+
+#########################################################
 # Update Configuration Files
 #########################################################
 
 update_config_files() {
     echo ""
     echo "[Step] Updating configuration files..."
+
+    # Detect public IP address
+    local public_ip=$(detect_public_ip)
+    echo "  Detected public IP: $public_ip"
 
     # Update eqemu_config.json
     local config_file="$EQEMU_SERVER_DIR/eqemu_config.json"
@@ -629,7 +671,15 @@ update_config_files() {
         sed -i "s/\"longname\": \".*\"/\"longname\": \"$SERVER_LONG_NAME\"/" "$config_file"
         sed -i "s/\"shortname\": \".*\"/\"shortname\": \"$SERVER_SHORT_NAME\"/" "$config_file"
 
+        # Update public IP address in world.address (within the world section)
+        # This is the IP clients will use to connect
+        sed -i "0,/\"address\": \".*\"/ s/\"address\": \".*\"/\"address\": \"$public_ip\"/" "$config_file"
+
+        # Update world TCP IP for zone server connections
+        sed -i "s/\"tcp\": {[^}]*\"ip\": \"[^\"]*\"/\"tcp\": {\"ip\": \"$public_ip\"/" "$config_file"
+
         echo "  Updated eqemu_config.json"
+        echo "  Set public address to: $public_ip"
     fi
 
     # Update login.json
