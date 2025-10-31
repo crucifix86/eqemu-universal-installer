@@ -460,6 +460,38 @@ You can run multiple server instances by:
 - **Installer Author**: Based on the original installer by Akkadius
 - **Co-Authors**: N0ctrnl and the EQEmu community
 
+## 💾 Installation Backup
+
+**Critical Safety Backup**: `eqemu-installer-backup-20251031.tar.gz` (45MB)
+
+This archive contains a **complete working snapshot** of the installer including:
+- ✅ All installation scripts with auto-generated credentials
+- ✅ Pre-compiled Perl 5.32.1 tarball (18MB)
+- ✅ Tested and verified configuration
+- ✅ Ubuntu 24.04 compatible
+
+**When to use this backup:**
+- If you need to restore the installer to a known working state
+- If GitHub repository has issues or breaking changes
+- For offline installations or air-gapped systems
+- As a reference for custom installations
+
+**How to restore from backup:**
+```bash
+# Extract the backup
+tar -xzf eqemu-installer-backup-20251031.tar.gz -C /tmp/eqemu-restore
+cd /tmp/eqemu-restore
+
+# Run the installer
+sudo ./install.sh
+```
+
+**Important Notes:**
+- This backup includes the pre-compiled Perl 5.32.1 which fixes map crashes on Ubuntu 24.04
+- The installer auto-generates all credentials and saves them to `/root/eqemu_credentials.txt`
+- Total installation time: ~10-15 minutes (no compilation required)
+- Backup created: October 31, 2025
+
 ## Disclaimer
 
 EverQuest is a registered trademark of Daybreak Game Company LLC.

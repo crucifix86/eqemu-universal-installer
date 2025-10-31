@@ -1,0 +1,12 @@
+# Backup files (keep locally only)
+*.tar.gz
+eqemu-installer-backup-*
+
+# Temporary files
+*.tmp
+*.log
+
+# Build directories
+build/
+*.o
+*.so
