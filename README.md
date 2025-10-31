@@ -2,7 +2,51 @@
 
 A cross-platform installer for EverQuest Emulator (EQEmu) server that supports both **Windows** and **Linux** operating systems.
 
-## Table of Contents
+## 🚀 Quick Installation (Ubuntu/Debian)
+
+```bash
+# Clone the repository
+git clone https://github.com/crucifix86/eqemu-universal-installer.git
+cd eqemu-universal-installer
+
+# Make installer executable
+chmod +x install.sh scripts/install_linux.sh
+
+# Run installer as root
+sudo ./install.sh
+```
+
+The installer will prompt you for:
+- Database credentials
+- Server name
+- Configuration settings
+
+Installation takes 15-30 minutes and handles everything automatically.
+
+### 💡 Testing on Ubuntu VPS
+
+If you're testing on a fresh Ubuntu VPS:
+
+```bash
+# Update system first
+sudo apt update && sudo apt upgrade -y
+
+# Install git if not present
+sudo apt install git -y
+
+# Clone and run installer
+git clone https://github.com/crucifix86/eqemu-universal-installer.git
+cd eqemu-universal-installer
+chmod +x install.sh scripts/install_linux.sh
+sudo ./install.sh
+```
+
+**Important**: The installer will create an `eqemu` user. After installation, you can:
+- Start server: `cd /home/eqemu/server && ./start.sh`
+- Check status: `./status.sh`
+- Stop server: `./stop.sh`
+
+## 📋 Table of Contents
 
 - [Features](#features)
 - [Requirements](#requirements)
@@ -44,7 +88,13 @@ A cross-platform installer for EverQuest Emulator (EQEmu) server that supports b
 
 ### Windows Installation
 
-1. **Extract the installer package** to a temporary location
+1. **Clone the repository** or download as ZIP:
+   ```powershell
+   git clone https://github.com/crucifix86/eqemu-universal-installer.git
+   cd eqemu-universal-installer
+   ```
+
+   Or download ZIP from GitHub and extract it.
 
 2. **Run as Administrator**:
    - Right-click on `install.bat`
@@ -53,22 +103,28 @@ A cross-platform installer for EverQuest Emulator (EQEmu) server that supports b
 3. **Follow the prompts**:
    - Database name (e.g., `peqdb`)
    - Database username (e.g., `eqemu`)
-   - Database password
+   - Database password (create a secure password)
    - Server long name (e.g., `My EQEmu Server`)
    - Server short name (e.g., `myserver`)
 
 4. **Wait for installation to complete**
    - This may take 15-30 minutes depending on your internet connection
-   - The installer will download and configure all necessary components
+   - The installer will:
+     - Install Chocolatey package manager
+     - Install all prerequisites (Git, MariaDB, Perl, etc.)
+     - Download server binaries
+     - Download and import PEQ database
+     - Download PEQ maps
+     - Configure server files
 
 5. **Complete post-installation steps** (see [Post-Installation](#post-installation))
 
 ### Linux Installation
 
-1. **Extract the installer package**:
+1. **Clone the repository**:
    ```bash
-   unzip eqemu-universal-installer.zip
-   cd universal_installer
+   git clone https://github.com/crucifix86/eqemu-universal-installer.git
+   cd eqemu-universal-installer
    ```
 
 2. **Make the installer executable**:
@@ -83,17 +139,23 @@ A cross-platform installer for EverQuest Emulator (EQEmu) server that supports b
    ```
 
 4. **Follow the prompts**:
-   - Linux user `eqemu` password
-   - MySQL root password
+   - Linux user `eqemu` password (for the eqemu user that will be created)
+   - MySQL root password (create a secure password)
    - Database name (e.g., `peqdb`)
    - Database username (e.g., `eqemu`)
-   - Database password
+   - Database password (create a secure password)
    - Server long name (e.g., `My EQEmu Server`)
    - Server short name (e.g., `myserver`)
 
 5. **Wait for installation to complete**
    - This may take 15-30 minutes depending on your internet connection
-   - The installer will download and configure all necessary components
+   - The installer will:
+     - Install all prerequisites (MariaDB, Perl, Lua, etc.)
+     - Download server binaries
+     - Download and import PEQ database
+     - Download PEQ maps
+     - Configure server files
+     - Set up the eqemu user and directories
 
 6. **Complete post-installation steps** (see [Post-Installation](#post-installation))
 
