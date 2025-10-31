@@ -1,0 +1,40 @@
+{
+   "account" : {
+      "auto_create_accounts" : true
+   },
+   "client_configuration" : {
+      "sod_opcodes" : "assets/opcodes/login_opcodes_sod.conf",
+      "sod_port" : 5999,
+      "titanium_opcodes" : "assets/opcodes/login_opcodes.conf",
+      "titanium_port" : 5998
+   },
+   "database" : {
+      "db" : "peqdbname",
+      "host" : "127.0.0.1",
+      "password" : "mysqlpassword",
+      "port" : "3306",
+      "user" : "eqemu"
+   },
+   "logging" : {
+      "dump_packets_in" : false,
+      "dump_packets_out" : false,
+      "trace" : false,
+      "world_trace" : false
+   },
+   "security" : {
+      "allow_password_login" : true,
+      "allow_token_login" : false,
+      "mode" : 14
+   },
+   "web_api" : {
+      "enabled" : false,
+      "port" : 6000
+   },
+   "worldservers" : {
+      "dev_test_servers_list_bottom" : false,
+      "reject_duplicate_servers" : false,
+      "show_player_count" : false,
+      "special_character_start_list_bottom" : false,
+      "unregistered_allowed" : true
+   }
+}

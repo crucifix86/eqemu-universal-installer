@@ -1,0 +1,89 @@
+================================================================================
+  EverQuest Emulator Universal Installer
+  Version 1.0
+================================================================================
+
+QUICK INSTALLATION INSTRUCTIONS
+
+================================================================================
+WINDOWS USERS
+================================================================================
+
+1. Extract this archive to a temporary location
+
+2. Right-click "install.bat" and select "Run as administrator"
+
+3. Follow the on-screen prompts
+
+4. Installation will take 15-30 minutes
+
+5. See QUICKSTART.md for post-installation steps
+
+
+================================================================================
+LINUX USERS
+================================================================================
+
+1. Extract this archive:
+   tar -xzf EQEmu-Universal-Installer.tar.gz
+   cd universal_installer
+
+2. Make installer executable:
+   chmod +x install.sh
+   chmod +x scripts/install_linux.sh
+
+3. Run installer as root:
+   sudo ./install.sh
+
+4. Follow the on-screen prompts
+
+5. Installation will take 15-30 minutes
+
+6. See QUICKSTART.md for post-installation steps
+
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+README.md        - Complete documentation with troubleshooting
+QUICKSTART.md    - Quick start guide for fast setup
+CHANGELOG.md     - Version history and features
+
+
+================================================================================
+WHAT YOU'LL NEED
+================================================================================
+
+- Administrator/root access
+- Internet connection
+- 10+ GB free disk space
+- Database credentials (you'll create these during install)
+- Server name (you'll choose this during install)
+
+
+================================================================================
+DEFAULT INSTALLATION PATHS
+================================================================================
+
+Windows:  C:\EQEmu
+Linux:    /home/eqemu
+
+
+================================================================================
+SUPPORT
+================================================================================
+
+Forums:   https://www.eqemulator.org/forums/
+GitHub:   https://github.com/EQEmu/Server
+
+
+================================================================================
+DISCLAIMER
+================================================================================
+
+EverQuest is a registered trademark of Daybreak Game Company LLC.
+EQEmulator is not associated or affiliated in any way with Daybreak Game
+Company LLC.
+
+This software is provided for educational and development purposes only.

@@ -1,0 +1,60 @@
+{
+ "server": {
+  "database": {
+   "db": "peqdbname",
+   "host": "127.0.0.1",
+   "password": "mysqlpassword",
+   "port": "3306",
+   "username": "eqemu"
+  },
+  "directories": {
+   "opcodes": "assets/opcodes/",
+   "patches": "assets/patches/"
+  },
+  "files": {
+   "mail_opcodes": "assets/opcodes/mail_opcodes.conf",
+   "opcodes": "assets/opcodes/opcodes.conf"
+  },
+  "qsdatabase": {
+   "db": "peqdbname",
+   "host": "127.0.0.1",
+   "password": "mysqlpassword",
+   "port": "3306",
+   "username": "eqemu"
+  },
+  "ucs": {
+   "host": "127.0.0.1",
+   "port": "7778"
+  },
+  "world": {
+   "address": "127.0.0.1",
+   "key": "somerandomlongstringofcharacters",
+   "localaddress": "127.0.0.1",
+   "locked": "false",
+   "loginserver": {
+    "account": "",
+    "host": "127.0.0.1",
+    "password": "",
+    "port": "5998"
+   },
+   "longname": "Yourserverlongname",
+   "shortname": "yourservershortname",
+   "tcp": {
+    "ip": "127.0.0.1",
+    "port": "9000"
+   },
+   "telnet": {
+    "enabled": "false",
+    "ip": "0.0.0.0",
+    "port": "9001"
+   }
+  },
+  "zones": {
+   "defaultstatus": "0",
+   "ports": {
+    "high": "7400",
+    "low": "7100"
+   }
+  }
+ }
+}
