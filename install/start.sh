@@ -19,3 +19,7 @@ fi
 if test -f "./ucs"; then
    ./ucs &
 fi
+
+if test -f "./queryserv"; then
+   ./queryserv &
+fi
