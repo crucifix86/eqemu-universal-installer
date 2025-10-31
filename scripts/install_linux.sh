@@ -884,7 +884,7 @@ main() {
     configure_mariadb
     create_directories
     download_server_files
-    compile_server_from_source
+    download_server_binaries
     create_symlinks
     download_maps
     download_database
