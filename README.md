@@ -2,7 +2,9 @@
 
 A cross-platform installer for EverQuest Emulator (EQEmu) server that supports both **Windows** and **Linux** operating systems.
 
-## 🚀 Quick Installation (Ubuntu/Debian)
+> ⚠️ **IMPORTANT**: Currently only **Ubuntu 24.04 LTS** is fully supported and tested. Windows installer is under development and not yet functional.
+
+## 🚀 Quick Installation (Ubuntu 24.04 LTS)
 
 ```bash
 # Clone the repository
